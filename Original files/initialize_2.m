@@ -1,0 +1,113 @@
+run('close_Serial.m')
+comPort='com6';% com 42 arduino viejo
+[force.s,fserialFlag]=setupSerial(comPort);
+%calCo=calibrateForce(force.s);
+calCo.g=0.054545454545455;
+calCo.offset=0;
+load('thermistor_lookup.mat')
+format short
+
+%% Open a new figure - add start/stop and close serial buttons
+% initialize the figure that will be plot if it does not exist
+%clear button
+if(~exist('h','var')||~ishandle(h))
+    h=figure(1);
+    ax=axes('box','on');
+end
+if (~exist('button','var'))
+    button=uicontrol('Style','pushbutton','String','Stop',...
+        'pos',[0 0 50 25],'parent',h,...
+        'Callback','stop_call_vector','UserData',1);
+end
+% clos_call function calls everytime it is pressed
+if(~exist('button2','var'))
+    button=uicontrol('Style','pushbutton','String','Close Serial Port',...
+        'pos',[250 0 150 25],'parent',h,...
+        'Callback','closeSerial','UserData',1);    
+end
+    
+buf_len=2;
+plot_window=60; % 30 data points
+% Rolling plot of data
+%  buf_len=100;
+%  index=1:buf_len;
+% force_data=zeros(buf_len,1);
+% length_data=zeros(buf_len,1);
+tic
+% data Collection and plotting
+% while the figure window is open
+while (get(button,'UserData'))
+index=1:buf_len;
+% force_data=zeros(buf_len,1);
+% length_data=zeros(buf_len,1);
+    % Get the new value from acceleometer
+    [forces, length, temp1, temp2]=readData(force,calCo, thermistor_lookup);
+    forces
+    length
+    % Update the rolling plot. Append the new reading to the end of the 
+    % rolling plot data. Drop the first value
+    actual_time=toc;
+    force_data(buf_len,1:3)=[buf_len,actual_time, forces];
+    length_data(buf_len,1:3)=[buf_len,actual_time, length];
+    speed_data(buf_len,1)=buf_len;
+    speed_data(buf_len,2)=actual_time;
+    speed_data(buf_len,3)=(length_data(buf_len,3)-length_data(buf_len-1,3))/(length_data(buf_len,2)-length_data(buf_len-1,2));
+    speed_data_2(buf_len,1)=buf_len;
+    speed_data_2(buf_len,2)=actual_time;
+    speed_data_2(buf_len,3)=movmean(speed_data(buf_len,3),10);
+    temp1_data(buf_len,1:3)=[buf_len,actual_time,temp1];
+    temp2_data(buf_len,1:3)=[buf_len,actual_time,temp2];
+    if (buf_len<=plot_window) 
+    d_min=1;
+    t_ini=0;
+    else
+    d_min=buf_len-plot_window;
+    t_ini=(force_data(d_min,2));
+    end
+    
+    subplot(5,1,1);
+    plot(force_data(d_min:buf_len,2),force_data(d_min:buf_len,3),'r');
+    axis([t_ini ceil(actual_time) min(force_data(d_min:buf_len,3))-5 max(force_data(d_min:buf_len,3))+5]);
+    xlabel('time')
+    ylabel('F_z(g)')
+    
+    subplot(5,1,2);
+    plot(length_data(d_min:buf_len,2),length_data(d_min:buf_len,3),'r');
+    axis([t_ini ceil(actual_time) min(length_data(d_min:buf_len,3))-5 max(length_data(d_min:buf_len,3))+5]);
+    xlabel('time')
+    ylabel('L_z(mm)')
+        
+    subplot(5,1,3);
+    plot(speed_data(:,2),speed_data(:,3),'r');
+%     plot(speed_data_2(:,2),speed_data_2(:,3),'b');
+%     axis([t_ini ceil(actual_time) min(speed_data(d_min:buf_len,3))-1 max(speed_data(d_min:buf_len,3))+1]);
+     axis([t_ini ceil(actual_time) min(speed_data_2(d_min:buf_len,3))-1 max(speed_data_2(d_min:buf_len,3))+1]);
+    xlabel('time')
+    ylabel('U_z(mm/s)')
+%     subplot(6,1,4);
+% %     plot(speed_data(:,2),speed_data(:,3),'r');
+%     plot(speed_data_2(:,2),speed_data_2(:,3),'b');
+% %     axis([t_ini ceil(actual_time) min(speed_data(d_min:buf_len,3))-1 max(speed_data(d_min:buf_len,3))+1]);
+%      axis([t_ini ceil(actual_time) min(speed_data_2(d_min:buf_len,3))-1 max(speed_data_2(d_min:buf_len,3))+1]);
+%     xlabel('time')
+%     ylabel('U2_z(mm/s)')
+    
+    
+    subplot(5,2,7);
+    plot(temp1_data(d_min:buf_len,2),temp1_data(d_min:buf_len,3),'r');
+    axis([t_ini ceil(actual_time) 0 300]);
+%     plot(temp1_data(:,2),temp1_data(:,3),'r');
+%     axis([0 ceil(actual_time) 0 300]);
+    xlabel('time')
+    ylabel('T1 (C)')
+    subplot(5,2,8);
+    plot(temp2_data(:,2),temp2_data(:,3),'r');
+    axis([0 ceil(actual_time) 0 300]);
+    xlabel('time')
+    ylabel('T2 (C)')
+    drawnow;
+    buf_len=buf_len+1;
+end
+
+%% 
+clear force_data length_data index forces length temp1_data temp2_data speed_data   
