@@ -16,11 +16,7 @@ classdef ffdaq
             clc
             disp('Serial Port Closed')
             flag=1;
-            s=serial(comPort);
-            set(s,'DataBits',8);
-            set(s,'StopBits',1);
-            set(s,'BaudRate',9600);
-            set(s,'Parity','none');
+            s=serialport(comPort,9600);
             fopen(s);
             a='b';
             while (a~='a')
