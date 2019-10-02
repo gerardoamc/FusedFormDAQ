@@ -1,6 +1,6 @@
 %__________________________________________________________________________
 %              Data acquisition script for FusedForm Minilab
-%                    v1.0 Developed by Juan C. Blanco 
+%                      Developed by Juan C. Blanco 
 %                  Updated by Gerardo A. Mazzei Capote
 %                            September 2019
 %__________________________________________________________________________
@@ -16,7 +16,7 @@ classdef ffdaq
             clc
             disp('Serial Port Closed')
             flag=1;
-            s=serialport(comPort,9600);
+            s=serial(comPort,'BaudRate',9600,'StopBits',1,'DataBits',8,'Parity','none');
             fopen(s);
             a='b';
             while (a~='a')
